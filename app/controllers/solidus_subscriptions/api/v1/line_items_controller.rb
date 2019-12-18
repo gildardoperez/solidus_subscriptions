@@ -1,5 +1,5 @@
 class SolidusSubscriptions::Api::V1::LineItemsController < Spree::Api::BaseController
-  before_filter :load_line_item, only: [:update, :destroy]
+  before_action :load_line_item, only: [:update, :destroy]
   wrap_parameters :subscription_line_item
 
   def update
@@ -16,7 +16,11 @@ class SolidusSubscriptions::Api::V1::LineItemsController < Spree::Api::BaseContr
     return render json: {}, status: 400 if @line_item.order.complete?
 
     @line_item.destroy!
-    @line_item.order.update!
+    if Spree.solidus_gem_version >= Gem::Version.new('2.4.0')
+      @line_item.order.recalculate
+    else
+      @line_item.order.update!
+    end
 
     render json: @line_item.to_json
   end

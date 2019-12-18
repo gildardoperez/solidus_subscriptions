@@ -1,4 +1,4 @@
-require 'rails_helper'
+require 'spec_helper'
 require 'spree/api/testing_support/helpers'
 
 RSpec.describe Spree::Api::OrdersController, type: :controller do
@@ -10,8 +10,8 @@ RSpec.describe Spree::Api::OrdersController, type: :controller do
 
   describe 'patch /update' do
     subject(:subscription_line_items) do
-      patch( :update, params)
-      order.subscription_line_items(true)
+      patch :update, params: params
+      order.subscription_line_items.reload
     end
 
     before { stub_authentication! }

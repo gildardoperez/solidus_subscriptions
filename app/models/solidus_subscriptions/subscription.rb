@@ -1,4 +1,4 @@
-# The subscription class is responsable for grouping together the
+# The subscription class is responsible for grouping together the
 # information required for the system to place a subscriptions order on
 # behalf of a specific user.
 module SolidusSubscriptions
@@ -7,22 +7,24 @@ module SolidusSubscriptions
 
     PROCESSING_STATES = [:pending, :failed, :success]
 
-    belongs_to :user, class_name: Spree.user_class
-    has_many :line_items, class_name: 'SolidusSubscriptions::LineItem'
+    belongs_to :user, class_name: Spree.user_class.to_s
+    has_many :line_items, class_name: 'SolidusSubscriptions::LineItem', inverse_of: :subscription
     has_many :installments, class_name: 'SolidusSubscriptions::Installment'
     belongs_to :store, class_name: 'Spree::Store'
-    belongs_to :shipping_address, class_name: 'Spree::Address'
+    belongs_to :shipping_address, class_name: 'Spree::Address', optional: true
 
     validates :user, presence: :true
     validates :skip_count, :successive_skip_count, presence: true, numericality: { greater_than_or_equal_to: 0 }
+    validates :interval_length, numericality: { greater_than: 0 }
 
-    accepts_nested_attributes_for :line_items, :shipping_address
+    accepts_nested_attributes_for :shipping_address
+    accepts_nested_attributes_for :line_items, allow_destroy: true
 
     # The following methods are delegated to the associated
     # SolidusSubscriptions::LineItem
     #
-    # :interval, :quantity, :subscribable_id, :end_date
-    delegate :interval, :quantity, :subscribable_id, :end_date, to: :line_item
+    # :quantity, :subscribable_id
+    delegate :quantity, :subscribable_id, to: :line_item
 
     # Find all subscriptions that are "actionable"; that is, ones that have an
     # actionable_date in the past and are not invalid or canceled.
@@ -32,7 +34,7 @@ module SolidusSubscriptions
     end)
 
     # Find subscriptions based on their processing state. This state is not a
-    # model attrubute.
+    # model attribute.
     #
     # @param state [Symbol] One of :pending, :success, or failed
     #
@@ -107,7 +109,7 @@ module SolidusSubscriptions
 
     # This method determines if a subscription may be canceled. Canceled
     # subcriptions will not be processed. By default subscriptions may always be
-    # canceled. If this method is overriden to return false, the subscription
+    # canceled. If this method is overridden to return false, the subscription
     # will be moved to the :pending_cancellation state until it is canceled
     # again and this condition is true.
     #
@@ -121,7 +123,7 @@ module SolidusSubscriptions
     #
     # If a user cancels this subscription less than 10 days before it will
     # be processed the subscription will be bumped into the
-    # :pending_cancellation state instead of being canceled. Susbcriptions
+    # :pending_cancellation state instead of being canceled. Subscriptions
     # pending cancellation will still be processed.
     def can_be_canceled?
       return true if actionable_date.nil?
@@ -180,7 +182,7 @@ module SolidusSubscriptions
     end
 
     # The state of the last attempt to process an installment associated to
-    # this subscrtipion
+    # this subscription
     #
     # @return [String] pending if the no installments have been processed,
     #   failed if the last installment has not been fulfilled and, success

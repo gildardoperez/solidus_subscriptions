@@ -1,4 +1,4 @@
-require 'rails_helper'
+require 'spec_helper'
 require 'spree/api/testing_support/helpers'
 
 RSpec.describe Spree::Api::LineItemsController, type: :controller do
@@ -6,7 +6,7 @@ RSpec.describe Spree::Api::LineItemsController, type: :controller do
   routes { Spree::Core::Engine.routes }
 
   describe 'POST :create' do
-    subject { post :create, params }
+    subject { post :create, params: params }
 
     let(:params) { line_item_params }
     let!(:variant) { create :variant }
@@ -63,7 +63,7 @@ RSpec.describe Spree::Api::LineItemsController, type: :controller do
   end
 
   describe 'patch :update' do
-    subject { patch :create, params }
+    subject { patch :create, params: params }
 
     let(:params) { line_item_params }
     let!(:variant) { create :variant }

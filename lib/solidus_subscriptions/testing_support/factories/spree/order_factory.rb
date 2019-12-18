@@ -1,8 +1,8 @@
-FactoryGirl.modify do
+FactoryBot.modify do
   factory :order do
     trait :with_subscription_line_items do
       transient do
-        n_line_items 1
+        n_line_items { 1 }
       end
 
       line_items do

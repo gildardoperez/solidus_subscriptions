@@ -1,5 +1,7 @@
 class SolidusSubscriptions::Api::V1::SubscriptionsController < Spree::Api::BaseController
-  before_filter :load_subscription, only: [:cancel, :update, :skip]
+  before_action :load_subscription, only: [:cancel, :update, :skip]
+
+  protect_from_forgery unless: -> { request.format.json? }
 
   def update
     if @subscription.update(subscription_params)

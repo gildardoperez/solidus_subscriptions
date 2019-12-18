@@ -1,13 +1,16 @@
-require 'rails_helper'
+require 'spec_helper'
 
 RSpec.describe SolidusSubscriptions::Checkout do
   let(:checkout) { described_class.new(installments) }
-  let(:root_order) { create :completed_order_with_pending_payment }
-  let(:subscription_user) do
-    create(:user, :subscription_user).tap do |user|
-      create(:credit_card, gateway_customer_profile_id: 'BGS-123', user: user, default: true)
-    end
-  end
+  let(:root_order) { create :completed_order_with_pending_payment, user: subscription_user }
+  let(:subscription_user) { create(:user, :subscription_user) }
+  let!(:credit_card) {
+    card = create(:credit_card, user: subscription_user, gateway_customer_profile_id: 'BGS-123', payment_method: payment_method)
+    wallet_payment_source = subscription_user.wallet.add(card)
+    subscription_user.wallet.default_wallet_payment_source = wallet_payment_source
+    card
+  }
+  let(:payment_method) { create(:payment_method) }
   let(:installments) { create_list(:installment, 2, installment_traits) }
 
   let(:installment_traits) do
@@ -19,6 +22,11 @@ RSpec.describe SolidusSubscriptions::Checkout do
         }]
       }]
     }
+  end
+
+  before do
+    SolidusSubscriptions::Config.default_gateway { payment_method }
+    Spree::Variant.all.each { |v| v.update(subscribable: true) }
   end
 
   context 'initialized with installments belonging to multiple users' do
@@ -105,6 +113,32 @@ RSpec.describe SolidusSubscriptions::Checkout do
       end
     end
 
+    if Gem::Specification.find_by_name('solidus').version >= Gem::Version.new('1.4.0')
+      context 'Altered checkout flow' do
+        before do
+          @old_checkout_flow = Spree::Order.checkout_flow
+          Spree::Order.remove_checkout_step(:delivery)
+        end
+
+        after do
+          Spree::Order.checkout_flow(&@old_checkout_flow)
+        end
+
+        it 'has a payment' do
+          expect(order.payments.valid).to be_present
+        end
+
+        it 'has the correct totals' do
+          expect(order).to have_attributes(
+            total: 39.98,
+            shipment_total: 0
+          )
+        end
+
+        it { is_expected.to be_complete }
+      end
+    end
+
     context 'the variant is out of stock' do
       let(:subscription_line_item) { installments.last.subscription.line_items.first }
 
@@ -139,7 +173,13 @@ RSpec.describe SolidusSubscriptions::Checkout do
     end
 
     context 'the payment fails' do
-      let!(:credit_card) { create(:credit_card, user: checkout.user, default: true) }
+      let(:payment_method) { create(:payment_method) }
+      let!(:credit_card) {
+        card = create(:credit_card, user: checkout.user, payment_method: payment_method)
+        wallet_payment_source = checkout.user.wallet.add(card)
+        checkout.user.wallet.default_wallet_payment_source = wallet_payment_source
+        card
+      }
       let(:expected_date) { (DateTime.current + SolidusSubscriptions::Config.reprocessing_interval).beginning_of_minute }
 
       it { is_expected.to be_nil }
@@ -148,7 +188,7 @@ RSpec.describe SolidusSubscriptions::Checkout do
         subject
 
         details = installments.map do |installments|
-          installments.details(true).last
+          installments.details.reload.last
         end
 
         expect(details).to all be_failed && have_attributes(
@@ -215,6 +255,7 @@ RSpec.describe SolidusSubscriptions::Checkout do
 
     context 'the user has store credit' do
       it_behaves_like 'a completed checkout'
+      let!(:store_credit_payment_method) { create :store_credit_payment_method }
       let!(:store_credit) { create :store_credit, user: subscription_user }
 
       it 'has a valid store credit payment' do

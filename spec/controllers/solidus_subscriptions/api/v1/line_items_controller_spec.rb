@@ -1,4 +1,4 @@
-require "rails_helper"
+require 'spec_helper'
 
 RSpec.describe SolidusSubscriptions::Api::V1::LineItemsController, type: :controller do
   routes { SolidusSubscriptions::Engine.routes }
@@ -13,10 +13,11 @@ RSpec.describe SolidusSubscriptions::Api::V1::LineItemsController, type: :contro
       {
         id: line.id,
         subscription_line_item: { quantity: 21 },
-        token: user.spree_api_key
+        token: user.spree_api_key,
+        format: :json
       }
     end
-    subject { post :update, params }
+    subject { post :update, params: params }
 
     context 'guest user' do
       let(:order) { create :order }
@@ -34,7 +35,7 @@ RSpec.describe SolidusSubscriptions::Api::V1::LineItemsController, type: :contro
       context "with valid params" do
         let(:json_body) { JSON.parse(subject.body) }
 
-        it { is_expected.to be_success }
+        it { is_expected.to be_successful }
         it "returns the updated record" do
           expect(json_body["quantity"]).to eq 21
         end
@@ -60,7 +61,7 @@ RSpec.describe SolidusSubscriptions::Api::V1::LineItemsController, type: :contro
       context "with valid params" do
         let(:json_body) { JSON.parse(subject.body) }
 
-        it { is_expected.to be_success }
+        it { is_expected.to be_successful }
         it "returns the updated record" do
           expect(json_body["quantity"]).to eq 21
         end
@@ -71,7 +72,8 @@ RSpec.describe SolidusSubscriptions::Api::V1::LineItemsController, type: :contro
           {
             id: line.id,
             subscription_line_item: { interval_length: -1 },
-            token: user.spree_api_key
+            token: user.spree_api_key,
+            format: :json
           }
         end
 
@@ -86,8 +88,15 @@ RSpec.describe SolidusSubscriptions::Api::V1::LineItemsController, type: :contro
   end
 
   describe "#destroy" do
-    let(:params) { { id: line.id, order_id: order.id, token: user.spree_api_key } }
-    subject { delete :destroy, params }
+    let(:params) {
+      {
+        id: line.id,
+        order_id: order.id,
+        token: user.spree_api_key,
+        format: :json
+      }
+    }
+    subject { delete :destroy, params: params }
 
     context "when the order is not ours" do
       let(:order) { create :order, user: create(:user) }
@@ -101,7 +110,7 @@ RSpec.describe SolidusSubscriptions::Api::V1::LineItemsController, type: :contro
 
     context "when the order is ours and incomplete" do
       let(:order) { create :order, user: user }
-      it { is_expected.to be_success }
+      it { is_expected.to be_successful }
     end
   end
 end

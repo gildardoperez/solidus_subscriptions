@@ -1,4 +1,4 @@
-require 'rails_helper'
+require 'spec_helper'
 
 RSpec.describe Spree::Controllers::Orders::CreateSubscriptionLineItems, type: :controller do
   controller(Spree::OrdersController) {}
@@ -12,7 +12,7 @@ RSpec.describe Spree::Controllers::Orders::CreateSubscriptionLineItems, type: :c
   end
 
   describe 'POST /orders/populate' do
-    subject { post :populate, params }
+    subject { post :populate, params: params }
 
     let!(:variant) { create :variant }
     let(:params) { line_item_params }

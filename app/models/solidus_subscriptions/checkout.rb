@@ -65,17 +65,18 @@ module SolidusSubscriptions
     private
 
     def checkout
-      order.update!
+      if Spree.solidus_gem_version >= Gem::Version.new('2.4.0')
+        order.recalculate
+      else
+        order.update!
+      end
       apply_promotions
 
-      order.next! # cart => address
-
-      order.ship_address = ship_address
-      order.next! # address => delivery
-      order.next! # delivery => payment
-
-      create_payment
-      order.next! # payment => confirm
+      order.checkout_steps[0...-1].each do
+        order.ship_address = ship_address if order.state == "address"
+        create_payment if order.state == "payment"
+        order.next!
+      end
 
       # Do this as a separate "quiet" transition so that it returns true or
       # false rather than raising a failed transition error
@@ -117,7 +118,11 @@ module SolidusSubscriptions
     end
 
     def active_card
-      user.credit_cards.default.last
+      if SolidusSupport.solidus_gem_version < Gem::Version.new("2.2.0")
+        user.credit_cards.default.last
+      else
+        user.wallet.default_wallet_payment_source.payment_source
+      end
     end
 
     def create_payment

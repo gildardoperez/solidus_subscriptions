@@ -1,5 +1,5 @@
 # This class represents a single attempt to fulfill an installment. It will
-# indicate the result of that attept.
+# indicate the result of that attempt.
 module SolidusSubscriptions
   class InstallmentDetail < ActiveRecord::Base
     belongs_to(
@@ -8,7 +8,7 @@ module SolidusSubscriptions
       inverse_of: :details
     )
 
-    belongs_to(:order, class_name: 'Spree::Order')
+    belongs_to(:order, class_name: 'Spree::Order', optional: true)
 
     validates :installment, presence: true
     alias_attribute :successful, :success
